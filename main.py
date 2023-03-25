@@ -40,6 +40,6 @@ while True:
     print(acciones[9],precio_acciones[9],tiempo_acciones[9],var_acciones[9])
     
 
-    sleep(5)
+    sleep(5451214)
     
 
