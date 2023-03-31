@@ -3,14 +3,18 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import os
 import requests
-borrado = None
-if os.name == "posix":
-    borrado = "clear"
-elif os.name == "ce" or os.name == "nt" or os.name == "dos":
-    borrado = "cls"
+
 precio_valor_en_wallet = []
 valor_en_wallet = []
 url = "https://www.bolsamania.com/indice/IBEX-35"
+
+def borrado_dep_so():
+    borrado = None
+    if os.name == "posix":
+        borrado = "clear"
+    elif os.name == "ce" or os.name == "nt" or os.name == "dos":
+        borrado = "cls"
+    return borrado
 
 
 def urlcontent(url):
@@ -54,17 +58,19 @@ def ad_to_wallet(acciones,valor_en_wallet,precio_valor_en_wallet):
     return valor_en_wallet
     
 
-def show_tiempo_real(acciones,precio_acciones,tiempo_acciones,var_acciones,valor_en_wallet,precio_valor_en_wallet):
+def show_tiempo_real(acciones,precio_acciones,tiempo_acciones,var_acciones,
+                     valor_en_wallet,precio_valor_en_wallet):
+    borrado = borrado_dep_so()
     while True:
         acciones = []
         precio_acciones = []
         tiempo_acciones = []
-        var_acciones = []
-        
+        var_acciones = []        
         os.system(borrado)
         result = urlcontent(url)          
         scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones)
-        df = pd.DataFrame(list(zip(acciones,precio_acciones,var_acciones,tiempo_acciones)),columns=["Valor","Precio","","Hora"])
+        df = pd.DataFrame(list(zip(acciones,precio_acciones,var_acciones,tiempo_acciones)),
+                          columns=["Valor","Precio","","Hora"])
         print(df)
         if valor_en_wallet:
             df1 = pd.DataFrame(valor_en_wallet)
