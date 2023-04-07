@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import os
 import requests
 
-url = "https://www.bolsamania.com/indice/IBEX-35"
+url = "https://www.productoscotizados.com/mercado/ibex-35"
 wallet_total = []
 
 
@@ -22,32 +22,46 @@ def urlcontent(url):
     return result
 
 
-def scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones):
+def scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,close_acciones,more_or_less_acciones):
     url_content = BeautifulSoup(result.content, "html.parser")
-    acc_scrap = url_content.find_all(class_= "text-left ficha-name")
-    price_scrap = url_content.find_all(class_= "text-right ficha-price")
-    time_scrap = url_content.find_all(class_= "text-right ficha-time")
-    var_scrap = url_content.find_all(class_= "text-right ficha-var-por")
+    acc_scrap = url_content.find_all(class_= "ellipsis-short")
+    price_scrap = url_content.find_all(class_="tv-price")
+    time_scrap = url_content.find_all(class_="tv-time")
+    close_scrap = url_content.find_all(class_="tv-close")
+    var_scrap = url_content.find_all(class_="tv-change-percent")
+    more_or_less_scrap = url_content.find_all(class_="tv-change-abs")
 
     for acc in acc_scrap:
-        acciones.append(acc.contents[1].next)
+        acc = acc.text.replace("\t","").replace("\r","").replace("\n","")
+        acciones.append(acc)
     for price in price_scrap:
-        price = price.contents[1].contents[0].replace("€","")
-        price = price.replace(",",".")
-        precio_acciones.append(float(price))
-
+        if "\nPrecio\n" not in price.text:
+            price = price.text.replace("\n","").replace(",",".")
+            precio_acciones.append(float(price))
     for time in time_scrap:
-        tiempo_acciones.append(time.contents[1].next)
+        if "\nÚLTIMA ACTUALIZACIÓN\n" not in time.text:
+            time = time.text.replace("\n","")
+            tiempo_acciones.append(time)
     for var in var_scrap:
-        var_acciones.append(var.contents[1].text)
+        if "\n%\n" not in var.text:
+            var = var.text.replace("\n","")
+            var_acciones.append(var) 
+    for close in close_scrap:
+        if "\nPRECIO DE CIERRE\n" not in close.text:
+            close = close.text.replace("\n","").replace("\t","").replace("\r","")
+            close_acciones.append(close)
+    for more_or_less in more_or_less_scrap:
+        if "\n+/-" not in more_or_less.text:
+            more_or_less = more_or_less.text.replace("\n","")
+            more_or_less_acciones.append(more_or_less)
 
     
 def ad_to_wallet(acciones,wallet_total):
     df_acciones = pd.DataFrame(acciones)
     print(df_acciones)
     
-
     opcion = int(input("Qué valor del Ibex 35 has comprado?\n[Q]Para salir."))
+
     if opcion == "Q":
         main()
     else:
@@ -71,20 +85,24 @@ def ad_to_wallet(acciones,wallet_total):
     
 
 def show_tiempo_real(acciones,precio_acciones,tiempo_acciones,var_acciones,
-                     wallet_total):
+                     wallet_total,close_acciones,more_or_less_acciones):
     borrado = borrado_dep_so()
     while True:
         acciones = []
         precio_acciones = []
         tiempo_acciones = []
-        var_acciones = []        
+        var_acciones = [] 
+        close_acciones = []
+        more_or_less_acciones = []       
         os.system(borrado)
         result = urlcontent(url)          
-        scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones)
-        df = pd.DataFrame(list(zip(acciones,precio_acciones,var_acciones,tiempo_acciones)),
-                          columns=["Valor","Precio","","Hora"])
+        scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,close_acciones,more_or_less_acciones)
+        df = pd.DataFrame(list(zip(acciones,precio_acciones,close_acciones,
+                                   more_or_less_acciones,var_acciones,tiempo_acciones)),
+                          columns=["Stock","Price","Close Price","+/-","%","Time"])
         print(df)
         if wallet_total:
+            print('\n'*2)
             for x in wallet_total:
                  for y in x:   
                     if y == "Balance":
@@ -110,16 +128,19 @@ def main():
         precio_acciones = []
         tiempo_acciones = []
         var_acciones = []
-        
+        close_acciones = []
+        more_or_less_acciones = []
         result = urlcontent(url)
-        scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones)
+        scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,
+                 close_acciones,more_or_less_acciones)
         opcion = menu_principal()
         if opcion == "A":
             ad_to_wallet(acciones,wallet_total)
         if opcion == "B":
             print("miau")
         if opcion == "C":
-            show_tiempo_real(acciones,precio_acciones,tiempo_acciones,var_acciones,wallet_total)
+            show_tiempo_real(acciones,precio_acciones,tiempo_acciones,var_acciones,wallet_total,
+                             close_acciones,more_or_less_acciones)
     
 
 if __name__ == "__main__":
