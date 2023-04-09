@@ -22,7 +22,7 @@ def urlcontent(url):
     return result
 
 
-def scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,close_acciones,more_or_less_acciones):
+def scrapurl(result,realtime):
     url_content = BeautifulSoup(result.content, "html.parser")
     acc_scrap = url_content.find_all(class_= "ellipsis-short")
     price_scrap = url_content.find_all(class_="tv-price")
@@ -30,6 +30,12 @@ def scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,close_
     close_scrap = url_content.find_all(class_="tv-close")
     var_scrap = url_content.find_all(class_="tv-change-percent")
     more_or_less_scrap = url_content.find_all(class_="tv-change-abs")
+    acciones = []
+    precio_acciones = []
+    tiempo_acciones = []
+    var_acciones = []
+    close_acciones = []
+    more_or_less_acciones = []
 
     for acc in acc_scrap:
         acc = acc.text.replace("\t","").replace("\r","").replace("\n","")
@@ -54,10 +60,13 @@ def scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,close_
         if "\n+/-" not in more_or_less.text:
             more_or_less = more_or_less.text.replace("\n","")
             more_or_less_acciones.append(more_or_less)
+    for Stock, Price, Time, Var, Close, VarinPercent in zip(acciones, precio_acciones, tiempo_acciones, var_acciones, 
+                                                            close_acciones, more_or_less_acciones):
+        value = {"Stock":Stock, "Price":Price, "Time":Time, "+/-":Var, "Close":Close, "%":VarinPercent}
+        realtime.append(value) 
 
-    
-def ad_to_wallet(acciones,wallet_total):
-    df_acciones = pd.DataFrame(acciones)
+def ad_to_wallet(realtime,wallet_total):
+    df_acciones = pd.DataFrame(realtime)
     print(df_acciones)
     
     opcion = int(input("Qué valor del Ibex 35 has comprado?\n[Q]Para salir."))
@@ -65,7 +74,7 @@ def ad_to_wallet(acciones,wallet_total):
     if opcion == "Q":
         main()
     else:
-        Stock = acciones[opcion]
+        Stock = realtime[opcion]["Stock"]
         Buyprice = float(input(f"A que precio has comprado las acciones de {Stock} ?\n"))
         Qty = int(input(f"Cuantas acciones de {Stock} has comrpado a {Buyprice}?\n"))
         Expense = float(input("Cuanto te han cobrado de gastos de compra?"))
@@ -84,29 +93,24 @@ def ad_to_wallet(acciones,wallet_total):
     return wallet_total
     
 
-def show_tiempo_real(acciones,precio_acciones,tiempo_acciones,var_acciones,
-                     wallet_total,close_acciones,more_or_less_acciones):
+def show_tiempo_real(wallet_total,realtime):
     borrado = borrado_dep_so()
     while True:
-        acciones = []
-        precio_acciones = []
-        tiempo_acciones = []
-        var_acciones = [] 
-        close_acciones = []
-        more_or_less_acciones = []       
+        realtime = []
+               
         os.system(borrado)
         result = urlcontent(url)          
-        scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,close_acciones,more_or_less_acciones)
-        df = pd.DataFrame(list(zip(acciones,precio_acciones,close_acciones,
-                                   more_or_less_acciones,var_acciones,tiempo_acciones)),
-                          columns=["Stock","Price","Close Price","+/-","%","Time"])
+        scrapurl(result,realtime)
+        df = pd.DataFrame(realtime)
         print(df)
         if wallet_total:
             print('\n'*2)
             for x in wallet_total:
                  for y in x:   
                     if y == "Balance":
-                        x["Balance"] = (precio_acciones[x["Index"]] * x["Qty"]) - x["AccountCharge"]
+                        for price in realtime:
+                            if price["Stock"] == x["Stock"]:
+                                x["Balance"] = (price["Price"] *x["Qty"]) - x["AccountCharge"]
 
 
             df1 = pd.DataFrame(wallet_total)
@@ -121,26 +125,28 @@ def menu_principal():
                    "[C]Tiempo Real.\n")
     return opcion
 
+def delete_to_wallet(wallet_total):
+    walletdf = pd.DataFrame(wallet_total)
+    print(walletdf)
+    opcion = int(input("Que movimiento quieres eliminar?"))
+    wallet_total.pop(opcion)
+    print("Movimiento Eliminado")
+
 
 def main():   
     while True:
-        acciones = []
-        precio_acciones = []
-        tiempo_acciones = []
-        var_acciones = []
-        close_acciones = []
-        more_or_less_acciones = []
+        
+        realtime = []
         result = urlcontent(url)
-        scrapurl(result,acciones,precio_acciones,tiempo_acciones,var_acciones,
-                 close_acciones,more_or_less_acciones)
+        scrapurl(result,realtime)
         opcion = menu_principal()
         if opcion == "A":
-            ad_to_wallet(acciones,wallet_total)
+            ad_to_wallet(realtime,wallet_total)
         if opcion == "B":
-            print("miau")
+            delete_to_wallet(wallet_total)
         if opcion == "C":
-            show_tiempo_real(acciones,precio_acciones,tiempo_acciones,var_acciones,wallet_total,
-                             close_acciones,more_or_less_acciones)
+            show_tiempo_real(wallet_total,realtime)
+                             
     
 
 if __name__ == "__main__":
