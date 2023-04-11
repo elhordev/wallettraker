@@ -7,7 +7,6 @@ import requests
 url = "https://www.productoscotizados.com/mercado/ibex-35"
 wallet_total = []
 
-
 def borrado_dep_so():
     borrado = None
     if os.name == "posix":
@@ -66,32 +65,36 @@ def scrapurl(result,realtime):
         realtime.append(value) 
 
 def ad_to_wallet(realtime,wallet_total):
+    
     df_acciones = pd.DataFrame(realtime)
     print(df_acciones)
-    
-    opcion = int(input("Qué valor del Ibex 35 has comprado?\n[Q]Para salir."))
+    try:
+        opcion = int(input("Qué valor del Ibex 35 has comprado?\n[Q]Para salir."))
 
-    if opcion == "Q":
-        main()
-    else:
-        Stock = realtime[opcion]["Stock"]
-        Buyprice = float(input(f"A que precio has comprado las acciones de {Stock} ?\n"))
-        Qty = int(input(f"Cuantas acciones de {Stock} has comrpado a {Buyprice}?\n"))
-        Expense = float(input("Cuanto te han cobrado de gastos de compra?"))
-        Index = opcion
-        wallet = dict(
-            Stock = Stock,
-            Buyprice = Buyprice,
-            Qty = Qty,
-            Expense = Expense,
-            Index = Index,
-            AccountCharge = (Buyprice * Qty) + Expense,
-            Balance = 0
-        )
-        print(f"Añadida la compra de {Qty} acciones de {Stock} por un cargo en cuenta de {wallet['AccountCharge']} euros.")
-        wallet_total.append(wallet)
-    return wallet_total
-    
+        if opcion == "Q":
+            main()
+        else:
+            Stock = realtime[opcion]["Stock"]
+            Buyprice = float(input(f"A que precio has comprado las acciones de {Stock} ?\n"))
+            Qty = int(input(f"Cuantas acciones de {Stock} has comrpado a {Buyprice}?\n"))
+            Expense = float(input("Cuanto te han cobrado de gastos de compra?"))
+            Index = opcion
+            wallet = dict(
+                Stock = Stock,
+                Buyprice = Buyprice,
+                Qty = Qty,
+                Expense = Expense,
+                Index = Index,
+                AccountCharge = (Buyprice * Qty) + Expense,
+                Balance = 0
+            )
+            print(f"Añadida la compra de {Qty} acciones de {Stock} por un cargo en cuenta de {wallet['AccountCharge']} euros.")
+            wallet_total.append(wallet)
+        
+    except IndexError:
+        print(f"El Indice introducido se ha salido del rango, por favor , elije del 0 al {len(realtime)}.")
+        sleep(5)
+        ad_to_wallet(realtime,wallet_total)
 
 def show_tiempo_real(wallet_total,realtime):
     borrado = borrado_dep_so()
@@ -122,7 +125,9 @@ def menu_principal():
     opcion = input("Elije la opción:\n"
                    "[A]Añadir a tu cartera.\n"
                    "[B]Eliminar de tu cartera.\n"
-                   "[C]Tiempo Real.\n")
+                   "[C]Tiempo Real.\n"
+                   "[D]Guardar Wallet\n"
+                   "[F]Cargar Wallet\n")
     return opcion
 
 def delete_to_wallet(wallet_total):
@@ -132,7 +137,23 @@ def delete_to_wallet(wallet_total):
     wallet_total.pop(opcion)
     print("Movimiento Eliminado")
 
+def save_wallet(wallet_total):
+    
+    df1 = pd.DataFrame(wallet_total)
+    df1.to_csv("wallet.csv")
+    print("Cartera guardada con exito!")
 
+def upload_wallet():
+    try:
+        
+        saved_wallet = pd.read_csv("wallet.csv",index_col=0)
+        wallet_total_from_csv = saved_wallet.to_dict("records")
+        print("Cartera cargada correctamente!")
+        return wallet_total_from_csv
+        
+    except:
+        print("No existe un Wallet guardado actualmente.")
+    
 def main():   
     while True:
         
@@ -145,8 +166,14 @@ def main():
         if opcion == "B":
             delete_to_wallet(wallet_total)
         if opcion == "C":
-            show_tiempo_real(wallet_total,realtime)
-                             
+            if wallet_total_from_csv:
+                show_tiempo_real(wallet_total_from_csv,realtime)
+            else:
+                show_tiempo_real(wallet_total,realtime)    
+        if opcion == "D":
+            save_wallet(wallet_total)  
+        if opcion == "F":
+            wallet_total_from_csv = upload_wallet()
     
 
 if __name__ == "__main__":
