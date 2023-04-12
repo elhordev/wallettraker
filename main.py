@@ -5,7 +5,7 @@ import os
 import requests
 
 url = "https://www.productoscotizados.com/mercado/ibex-35"
-wallet_total = []
+HEADER = "Wellcome to wallettraker v1.0 by elhorDev"
 
 def borrado_dep_so():
     borrado = None
@@ -29,6 +29,7 @@ def scrapurl(result,realtime):
     close_scrap = url_content.find_all(class_="tv-close")
     var_scrap = url_content.find_all(class_="tv-change-percent")
     more_or_less_scrap = url_content.find_all(class_="tv-change-abs")
+    
     acciones = []
     precio_acciones = []
     tiempo_acciones = []
@@ -96,8 +97,8 @@ def ad_to_wallet(realtime,wallet_total):
         sleep(5)
         ad_to_wallet(realtime,wallet_total)
 
-def show_tiempo_real(wallet_total,realtime):
-    borrado = borrado_dep_so()
+def show_tiempo_real(wallet_total,realtime,borrado):
+    
     while True:
         realtime = []
                
@@ -120,14 +121,43 @@ def show_tiempo_real(wallet_total,realtime):
             print(df1)
         sleep(5)
 
-
-def menu_principal():
+def wellcome_menu(borrado):
+    print ("\n" + HEADER + "\n" + "-" *len(HEADER) + "\n")
+    type_wallet = input("Como deseas trabajar?\n"
+                            "[A]Importar Wallet.\n"
+                            "[B]Wallet Temporal.\n"
+                            "[Q]Para Salir\n\n")
+    os.system(borrado)
+    while type_wallet != "Q" and type_wallet != "q":
+        
+        if type_wallet == "A" or type_wallet == "a":
+            wallet_total = upload_wallet()
+            return wallet_total
+        if type_wallet == "b" or type_wallet == "B":
+            wallet_total = []
+            return wallet_total
+           
+    print("Hasta la proxima!")
+    exit()   
+    
+def menu_principal(realtime,wallet_total,borrado):
+    os.system(borrado)
     opcion = input("Elije la opción:\n"
                    "[A]Añadir a tu cartera.\n"
                    "[B]Eliminar de tu cartera.\n"
                    "[C]Tiempo Real.\n"
                    "[D]Guardar Wallet\n"
-                   "[F]Cargar Wallet\n")
+                   )
+    os.system(borrado)
+    if opcion == "A" or opcion == "a":
+        ad_to_wallet(realtime,wallet_total)
+    if opcion == "B" or opcion == "b":
+        delete_to_wallet(wallet_total)
+    if opcion == "C" or opcion == "c":
+        show_tiempo_real(wallet_total,realtime,borrado)    
+    if opcion == "D" or opcion == "d":
+        save_wallet(wallet_total)  
+    
     return opcion
 
 def delete_to_wallet(wallet_total):
@@ -138,42 +168,36 @@ def delete_to_wallet(wallet_total):
     print("Movimiento Eliminado")
 
 def save_wallet(wallet_total):
-    
-    df1 = pd.DataFrame(wallet_total)
-    df1.to_csv("wallet.csv")
-    print("Cartera guardada con exito!")
-
+    if wallet_total:
+        df1 = pd.DataFrame(wallet_total)
+        df1.to_csv("wallet.csv")
+        print("Cartera guardada con exito!")
+    else:
+        print("Wallet temporal vacia, imposible generar.")
 def upload_wallet():
     try:
         
         saved_wallet = pd.read_csv("wallet.csv",index_col=0)
-        wallet_total_from_csv = saved_wallet.to_dict("records")
+        wallet_total = saved_wallet.to_dict("records")
         print("Cartera cargada correctamente!")
-        return wallet_total_from_csv
+        sleep(5)
+        return wallet_total
         
     except:
         print("No existe un Wallet guardado actualmente.")
+        wallet_total = []
+        sleep(5)
+        return wallet_total
     
 def main():   
-    while True:
-        
-        realtime = []
-        result = urlcontent(url)
-        scrapurl(result,realtime)
-        opcion = menu_principal()
-        if opcion == "A":
-            ad_to_wallet(realtime,wallet_total)
-        if opcion == "B":
-            delete_to_wallet(wallet_total)
-        if opcion == "C":
-            if wallet_total_from_csv:
-                show_tiempo_real(wallet_total_from_csv,realtime)
-            else:
-                show_tiempo_real(wallet_total,realtime)    
-        if opcion == "D":
-            save_wallet(wallet_total)  
-        if opcion == "F":
-            wallet_total_from_csv = upload_wallet()
+        borrado = borrado_dep_so()
+        wallet_total = wellcome_menu(borrado)
+        while True:
+            realtime = []
+            result = urlcontent(url)
+            scrapurl(result,realtime)
+            opcion = menu_principal(realtime,wallet_total,borrado)
+
     
 
 if __name__ == "__main__":
