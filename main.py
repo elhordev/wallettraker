@@ -62,46 +62,55 @@ def scrapurl(result,realtime):
             more_or_less_acciones.append(more_or_less)
     for Stock, Price, Time, Var, Close, VarinPercent in zip(acciones, precio_acciones, tiempo_acciones, var_acciones, 
                                                             close_acciones, more_or_less_acciones):
-        value = {"Stock":Stock, "Price":Price, "Time":Time, "+/-":Var, "Close":Close, "%":VarinPercent}
+        value = {"Stock":Stock, "Price":Price, "Time":Time, "%":Var, "Close":Close, "+/-":VarinPercent}
         realtime.append(value) 
 
-def ad_to_wallet(realtime,wallet_total):
+def ad_to_wallet(realtime,wallet_total,borrado):
     
     df_acciones = pd.DataFrame(realtime)
     print(df_acciones)
     try:
-        opcion = int(input("Qué valor del Ibex 35 has comprado?\n[Q]Para salir."))
+        opcion = int(input("Qué valor del Ibex 35 has comprado?\n"))
+                
+               
 
-        if opcion == "Q":
-            main()
-        else:
-            Stock = realtime[opcion]["Stock"]
-            Buyprice = float(input(f"A que precio has comprado las acciones de {Stock} ?\n"))
-            Qty = int(input(f"Cuantas acciones de {Stock} has comrpado a {Buyprice}?\n"))
-            Expense = float(input("Cuanto te han cobrado de gastos de compra?"))
-            Index = opcion
-            wallet = dict(
-                Stock = Stock,
-                Buyprice = Buyprice,
-                Qty = Qty,
-                Expense = Expense,
-                Index = Index,
-                AccountCharge = (Buyprice * Qty) + Expense,
-                Balance = 0
-            )
-            print(f"Añadida la compra de {Qty} acciones de {Stock} por un cargo en cuenta de {wallet['AccountCharge']} euros.")
-            wallet_total.append(wallet)
-        
+        Stock = realtime[opcion]["Stock"]
+        Buyprice = float(input(f"A que precio has comprado las acciones de {Stock} ?\n"))
+        Qty = int(input(f"Cuantas acciones de {Stock} has comrpado a {Buyprice}?\n"))
+        Expense = float(input("Cuanto te han cobrado de gastos de compra?\n"))
+        Index = opcion
+        wallet = dict(
+                        Stock = Stock,
+                        Buyprice = Buyprice,
+                        Qty = Qty,
+                        Expense = Expense,
+                        Index = Index,
+                        AccountCharge = (Buyprice * Qty) + Expense,
+                        Balance = 0
+                    )
+        os.system(borrado)
+        print(f"Añadida la compra de {Qty} acciones de {Stock} por un cargo en cuenta de {wallet['AccountCharge']} euros.")
+        wallet_total.append(wallet)
+    except ValueError:
+            os.system(borrado)
+            print("Valor introducido incorrecto, solo valor numerico.")
+            sleep(5)
+            os.system(borrado)
+            ad_to_wallet(realtime,wallet_total,borrado)
     except IndexError:
-        print(f"El Indice introducido se ha salido del rango, por favor , elije del 0 al {len(realtime)}.")
-        sleep(5)
-        ad_to_wallet(realtime,wallet_total)
+            os.system(borrado)
+            print(f"El Indice introducido se ha salido del rango, por favor , elije del 0 al {len(realtime)-1}.")
+            sleep(5)
+            os.system(borrado)
+            ad_to_wallet(realtime,wallet_total,borrado)
+    sleep(5)
+    os.system(borrado)
+    menu_principal(realtime,wallet_total,borrado)
 
 def show_tiempo_real(wallet_total,realtime,borrado):
     
     while True:
         realtime = []
-               
         os.system(borrado)
         result = urlcontent(url)          
         scrapurl(result,realtime)
@@ -114,7 +123,7 @@ def show_tiempo_real(wallet_total,realtime,borrado):
                     if y == "Balance":
                         for price in realtime:
                             if price["Stock"] == x["Stock"]:
-                                x["Balance"] = (price["Price"] *x["Qty"]) - x["AccountCharge"]
+                                x["Balance"] = "{} €".format((price["Price"] * x["Qty"]) - x["AccountCharge"])
 
 
             df1 = pd.DataFrame(wallet_total)
@@ -150,9 +159,9 @@ def menu_principal(realtime,wallet_total,borrado):
                    )
     os.system(borrado)
     if opcion == "A" or opcion == "a":
-        ad_to_wallet(realtime,wallet_total)
+        ad_to_wallet(realtime,wallet_total,borrado)
     if opcion == "B" or opcion == "b":
-        delete_to_wallet(wallet_total)
+        delete_to_wallet(realtime,wallet_total,borrado)
     if opcion == "C" or opcion == "c":
         show_tiempo_real(wallet_total,realtime,borrado)    
     if opcion == "D" or opcion == "d":
@@ -160,12 +169,33 @@ def menu_principal(realtime,wallet_total,borrado):
     
     return opcion
 
-def delete_to_wallet(wallet_total):
-    walletdf = pd.DataFrame(wallet_total)
-    print(walletdf)
-    opcion = int(input("Que movimiento quieres eliminar?"))
-    wallet_total.pop(opcion)
-    print("Movimiento Eliminado")
+def delete_to_wallet(realtime,wallet_total,borrado):
+    try:
+        if wallet_total:
+            walletdf = pd.DataFrame(wallet_total)
+            print(walletdf)
+            opcion = int(input("Que movimiento quieres eliminar?\n"))
+            wallet_total.pop(opcion)
+            os.system(borrado)
+            print("Movimiento Eliminado")
+            sleep(5)
+            menu_principal(realtime,wallet_total,borrado)
+        else:
+            print("Tu wallet esta Vacia")
+            sleep(5)
+            menu_principal(realtime,wallet_total,borrado)
+    except ValueError:
+            os.system(borrado)
+            print("Valor introducido incorrecto, solo valor numerico.")
+            sleep(5)
+            os.system(borrado)
+            delete_to_wallet(realtime,wallet_total,borrado)
+    except IndexError:
+            os.system(borrado)
+            print(f"El Indice introducido se ha salido del rango, por favor , elije del 0 al {len(wallet_total)-1}.")
+            sleep(5)
+            os.system(borrado)
+            delete_to_wallet(realtime,wallet_total,borrado)    
 
 def save_wallet(wallet_total):
     if wallet_total:
@@ -174,6 +204,7 @@ def save_wallet(wallet_total):
         print("Cartera guardada con exito!")
     else:
         print("Wallet temporal vacia, imposible generar.")
+
 def upload_wallet():
     try:
         
